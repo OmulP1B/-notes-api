@@ -6,6 +6,7 @@ import time
 
 app = FastAPI()
 
+DATABASE_URL = os.getenv("DATABASE_URL")
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "appdb")
@@ -14,6 +15,8 @@ DB_PASS = os.getenv("DB_PASS", "apppass")
 
 
 def get_conn():
+    if DATABASE_URL:
+        return psycopg2.connect(DATABASE_URL)
     return psycopg2.connect(
         host=DB_HOST, port=DB_PORT,
         dbname=DB_NAME, user=DB_USER, password=DB_PASS
@@ -45,6 +48,11 @@ def get_all():
     rows = cur.fetchall()
     con.close()
     return rows
+
+
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
 
 
 @app.get("/", response_class=HTMLResponse)
