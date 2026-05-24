@@ -1,25 +1,48 @@
 from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse
-import sqlite3
+import psycopg2
+import os
+import time
 
 app = FastAPI()
 
-DB = "data.db"
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = os.getenv("DB_NAME", "appdb")
+DB_USER = os.getenv("DB_USER", "appuser")
+DB_PASS = os.getenv("DB_PASS", "apppass")
+
+
+def get_conn():
+    return psycopg2.connect(
+        host=DB_HOST, port=DB_PORT,
+        dbname=DB_NAME, user=DB_USER, password=DB_PASS
+    )
 
 
 def init_db():
-    con = sqlite3.connect(DB)
-    con.execute("CREATE TABLE IF NOT EXISTS intrari (id INTEGER PRIMARY KEY AUTOINCREMENT, mesaj TEXT NOT NULL)")
-    con.commit()
-    con.close()
+    for i in range(10):
+        try:
+            con = get_conn()
+            con.autocommit = True
+            con.cursor().execute(
+                "CREATE TABLE IF NOT EXISTS intrari "
+                "(id SERIAL PRIMARY KEY, mesaj TEXT NOT NULL)"
+            )
+            con.close()
+            return
+        except Exception:
+            time.sleep(3)
 
 
 init_db()
 
 
 def get_all():
-    con = sqlite3.connect(DB)
-    rows = con.execute("SELECT id, mesaj FROM intrari ORDER BY id DESC").fetchall()
+    con = get_conn()
+    cur = con.cursor()
+    cur.execute("SELECT id, mesaj FROM intrari ORDER BY id DESC")
+    rows = cur.fetchall()
     con.close()
     return rows
 
@@ -32,8 +55,9 @@ def index():
 @app.post("/salveaza", response_class=HTMLResponse)
 def salveaza(mesaj: str = Form(...)):
     if mesaj.strip():
-        con = sqlite3.connect(DB)
-        con.execute("INSERT INTO intrari (mesaj) VALUES (?)", (mesaj.strip(),))
+        con = get_conn()
+        cur = con.cursor()
+        cur.execute("INSERT INTO intrari (mesaj) VALUES (%s)", (mesaj.strip(),))
         con.commit()
         con.close()
     return HTMLResponse(html_page(get_all()))
