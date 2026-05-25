@@ -59,6 +59,16 @@ def health():
     return {"status": "healthy"}
 
 
+@app.get("/dbcheck")
+def dbcheck():
+    try:
+        con = get_conn()
+        con.close()
+        return {"db": "connected", "url_set": bool(DATABASE_URL)}
+    except Exception as e:
+        return {"db": "error", "detail": str(e), "url_set": bool(DATABASE_URL)}
+
+
 @app.get("/", response_class=HTMLResponse)
 def index():
     return HTMLResponse(html_page(get_all()))
