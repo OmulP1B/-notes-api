@@ -16,7 +16,7 @@ DB_PASS = os.getenv("DB_PASS", "apppass")
 
 def get_conn():
     if DATABASE_URL:
-        return psycopg2.connect(DATABASE_URL, sslmode="require")
+        return psycopg2.connect(DATABASE_URL)
     return psycopg2.connect(
         host=DB_HOST, port=DB_PORT,
         dbname=DB_NAME, user=DB_USER, password=DB_PASS
@@ -42,12 +42,16 @@ init_db()
 
 
 def get_all():
-    con = get_conn()
-    cur = con.cursor()
-    cur.execute("SELECT id, mesaj FROM intrari ORDER BY id DESC")
-    rows = cur.fetchall()
-    con.close()
-    return rows
+    try:
+        con = get_conn()
+        cur = con.cursor()
+        cur.execute("SELECT id, mesaj FROM intrari ORDER BY id DESC")
+        rows = cur.fetchall()
+        con.close()
+        return rows
+    except Exception as e:
+        print(f"DB error: {e}")
+        return []
 
 
 @app.get("/health")
@@ -63,11 +67,14 @@ def index():
 @app.post("/salveaza", response_class=HTMLResponse)
 def salveaza(mesaj: str = Form(...)):
     if mesaj.strip():
-        con = get_conn()
-        cur = con.cursor()
-        cur.execute("INSERT INTO intrari (mesaj) VALUES (%s)", (mesaj.strip(),))
-        con.commit()
-        con.close()
+        try:
+            con = get_conn()
+            cur = con.cursor()
+            cur.execute("INSERT INTO intrari (mesaj) VALUES (%s)", (mesaj.strip(),))
+            con.commit()
+            con.close()
+        except Exception as e:
+            print(f"DB error: {e}")
     return HTMLResponse(html_page(get_all()))
 
 
