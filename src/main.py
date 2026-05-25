@@ -16,7 +16,7 @@ DB_PASS = os.getenv("DB_PASS", "apppass")
 
 def get_conn():
     if DATABASE_URL:
-        return psycopg2.connect(DATABASE_URL)
+        return psycopg2.connect(DATABASE_URL, sslmode="require")
     return psycopg2.connect(
         host=DB_HOST, port=DB_PORT,
         dbname=DB_NAME, user=DB_USER, password=DB_PASS
